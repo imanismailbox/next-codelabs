@@ -12,6 +12,53 @@ import { Fill, Stroke, Style } from "ol/style";
 import { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
+import { FeatureLike } from "ol/Feature";
+import { MapBrowserEvent } from "ol";
+
+export interface IResponse {
+  status: boolean;
+  data: IDesa;
+}
+
+export interface IDesa {
+  id: number;
+  kode_desa: string;
+  namobj: string;
+  fcode: string;
+  remark: string;
+  metadata: string;
+  srs_id: string;
+  kdbbps: string;
+  kdcbps: string;
+  kdcpum: string;
+  kdebps: string;
+  kdepum: string;
+  kdpbps: string;
+  kdpkab: string;
+  kdppum: string;
+  luaswh: number;
+  tipadm: number;
+  wadmkc: string;
+  wadmkd: string;
+  wadmkk: string;
+  wadmpr: string;
+  wiadkc: string;
+  wiadkd: string;
+  wiadkk: string;
+  wiadpr: string;
+  uupp: string;
+  shape_leng: number;
+  shape_area: number;
+  lon: number;
+  lat: number;
+  geom: IGeom;
+  area_km2: string;
+}
+
+export interface IGeom {
+  type: string;
+  coordinates: Array<Array<Array<number[]>>>;
+}
 
 export default function BatasDesaPage() {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -19,11 +66,9 @@ export default function BatasDesaPage() {
   const vectorLayerRef = useRef<VectorTileLayer | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<any[]>([]);
-  const [selectedDesaId, setSelectedDesaId] = useState<string | number | null>(
-    null
-  );
-  const [detailedInfo, setDetailedInfo] = useState<any | null>(null);
+  const [results, setResults] = useState<IDesa[]>([]);
+  const [selectedDesaId, setSelectedDesaId] = useState<number>(0);
+  const [detailedInfo, setDetailedInfo] = useState<IDesa | null>(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
 
   const handleSearch = useCallback(async () => {
@@ -52,7 +97,7 @@ export default function BatasDesaPage() {
     }
   }, [query]);
 
-  const fetchDesaDetail = useCallback(async (kode_desa: string | number) => {
+  const fetchDesaDetail = useCallback(async (kode_desa: string) => {
     try {
       const res = await fetch(
         `http://localhost/api/v1/desa/detail/${kode_desa}`
@@ -67,12 +112,7 @@ export default function BatasDesaPage() {
   }, []);
 
   const flyTo = useCallback(
-    (
-      lon: number,
-      lat: number,
-      desaId: string | number,
-      kodeDesa: string | number
-    ) => {
+    (lon: number, lat: number, desaId: number, kodeDesa: string) => {
       if (!mapInstanceRef.current) return;
       const coord = fromLonLat([lon, lat]);
       mapInstanceRef.current
@@ -86,8 +126,8 @@ export default function BatasDesaPage() {
   );
 
   // Create style function
-  const createStyleFunction = useCallback((currentSelectedId) => {
-    return (feature) => {
+  const createStyleFunction = useCallback((currentSelectedId: number) => {
+    return (feature: FeatureLike) => {
       const featureId = feature.getProperties().id;
 
       const defaultStyle = new Style({
@@ -175,7 +215,7 @@ export default function BatasDesaPage() {
     };
 
     // Handle click on map to get feature info
-    const handleMapClick = (event) => {
+    const handleMapClick = (event: MapBrowserEvent) => {
       const pixel = map.getEventPixel(event.originalEvent);
 
       map.forEachFeatureAtPixel(
@@ -314,7 +354,7 @@ export default function BatasDesaPage() {
               .filter(
                 ([key]) =>
                   !["geom", "created_at", "updated_at"].includes(key) &&
-                  detailedInfo[key] !== null
+                  detailedInfo[key as keyof IDesa] !== null
               )
               .map(([key, value]) => (
                 <div key={key} className="border-b pb-1">
